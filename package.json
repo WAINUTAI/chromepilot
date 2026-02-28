@@ -1,0 +1,21 @@
+{
+  "name": "browser-js",
+  "version": "1.0.0",
+  "description": "CLI tool to control Chrome via CDP (Chrome DevTools Protocol)",
+  "main": "browser.js",
+  "bin": {
+    "browser": "./browser.js"
+  },
+  "scripts": {
+    "start": "node browser.js",
+    "list": "node browser.js list",
+    "test": "node browser.js help"
+  },
+  "keywords": ["chrome", "cdp", "browser", "automation"],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "dependencies": {
+    "chrome-remote-interface": "^0.34.0"
+  }
+}
