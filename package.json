@@ -9,6 +9,8 @@
   "scripts": {
     "start": "node browser.js",
     "list": "node browser.js list",
+    "launch": "bash ./launch-chrome.sh",
+    "draft": "node compose-draft.js",
     "test": "node browser.js help"
   },
   "keywords": ["chrome", "cdp", "browser", "automation"],
