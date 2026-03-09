@@ -101,15 +101,15 @@ DEBUG_PORT=9333 CHROME_PATH=/usr/bin/google-chrome-stable bash ./launch-chrome.s
 
 ## Contributing
 
-PRs are welcome — bug fixes, new source connectors, or improvements to existing ones.
+PRs are welcome — bug fixes, new commands, or improvements to existing functionality.
 
-See [CONTRIBUTING.md](CONTRIBUTING.md) for setup, workflow, and a step-by-step guide for adding a new source connector.
+See [CONTRIBUTING.md](CONTRIBUTING.md) for setup, workflow, and testing guide.
 
 ## License
 
 This project is licensed under the [Apache License 2.0](LICENSE). See NOTICE for required attribution.
 
-WAINUT and NL-GOV-MCP are trademarks of WAINUT B.V. The Apache License 2.0 does not grant permission to use these names, trademarks, or branding to imply endorsement of derivative works. Forks and derivative works must retain the NOTICE file as required by the license.
+WAINUT and Browser-js are trademarks of WAINUT B.V. The Apache License 2.0 does not grant permission to use these names, trademarks, or branding to imply endorsement of derivative works. Forks and derivative works must retain the NOTICE file as required by the license.
 
 ## About WAINUT
 
