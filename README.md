@@ -98,3 +98,21 @@ Example:
 ```bash
 DEBUG_PORT=9333 CHROME_PATH=/usr/bin/google-chrome-stable bash ./launch-chrome.sh
 ```
+
+## Contributing
+
+PRs are welcome — bug fixes, new source connectors, or improvements to existing ones.
+
+See CONTRIBUTING.md for setup, workflow, and a step-by-step guide for adding a new source connector.
+
+## License
+
+This project is licensed under the Apache License 2.0. See NOTICE for required attribution.
+
+WAINUT and NL-GOV-MCP are trademarks of WAINUT B.V. The Apache License 2.0 does not grant permission to use these names, trademarks, or branding to imply endorsement of derivative works. Forks and derivative works must retain the NOTICE file as required by the license.
+
+## About WAINUT
+
+WAINUT is your one-stop AI shop in the Netherlands. We help organizations adopt AI and build an AI-enabled workforce — from recruiting the right talent, to implementing the right tools, to training teams that actually use them.
+
+Exploring AI for your organization? → wainut.ai — Unleash Your Potential.
