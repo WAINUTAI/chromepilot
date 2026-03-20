@@ -26,6 +26,8 @@
  *   new-tab [url]                      Open a new tab (via CDP, no popup blocker)
  *   close [tab-index]                 Close a tab
  *   html [selector]                   Get outer HTML (default: body)
+ *   search <query>                    Search across all open tabs (title, URL, page content)
+ *   close-all                         Close all open tabs
  *
  * Chain commands:    node browser.js open https://hn.com then elements
  * JSON output:       node browser.js --json list
@@ -498,6 +500,118 @@ const commands = {
     if (!html) throw new Error(`Element not found: ${selector}`);
     out(jsonMode ? { selector, html } : html);
   },
+
+  async search(args) {
+    const query = args[0];
+    if (!query) throw new Error("Usage: search <query>");
+    const searchLower = query.toLowerCase();
+
+    const tabs = (await CDP.List({ host, port })).filter((t) => t.type === "page");
+
+    if (tabs.length === 0) {
+      out(jsonMode ? { results: [] } : "No tabs open.");
+      return [];
+    }
+
+    const results = [];
+    const savedClient = client;
+    const savedConnectedTab = connectedTab;
+
+    for (let i = 0; i < tabs.length; i++) {
+      try {
+        // Connect to tab i without disturbing saved connection
+        let tmpClient;
+        if (savedConnectedTab === i && savedClient) {
+          tmpClient = savedClient;
+        } else {
+          tmpClient = await CDP({ host, port, target: tabs[i] });
+          await tmpClient.Page.enable();
+          await tmpClient.Runtime.enable();
+        }
+
+        const title = tabs[i].title || "";
+        const url = tabs[i].url || "";
+
+        // Check title and URL first
+        if (title.toLowerCase().includes(searchLower) || url.toLowerCase().includes(searchLower)) {
+          results.push({ tab: i, title, url, match: "header", snippet: "" });
+        } else {
+          // Search page content
+          try {
+            await tmpClient.Runtime.evaluate({ expression: "document.readyState", returnByValue: true });
+            const bodyText = await tmpClient.Runtime.evaluate({
+              expression: `(document.body ? document.body.innerText || '' : '').substring(0, 5000)`,
+              returnByValue: true,
+            });
+            const content = (bodyText.value || "").toLowerCase();
+            const idx = content.indexOf(searchLower);
+            if (idx !== -1) {
+              const start = Math.max(0, idx - 60);
+              const end = Math.min(content.length, idx + query.length + 60);
+              const snippet = (bodyText.value || "").substring(start, end).replace(/\s+/g, " ").trim();
+              results.push({ tab: i, title, url, match: "content", snippet });
+            }
+          } catch (_) {}
+        }
+
+        if (tmpClient !== savedClient) {
+          try { await tmpClient.close(); } catch (_) {}
+        }
+      } catch (_) {}
+    }
+
+    // Restore connection
+    if (savedConnectedTab !== -1 && savedClient) {
+      try {
+        client = savedClient;
+        connectedTab = savedConnectedTab;
+        await client.Page.enable();
+        await client.Runtime.enable();
+      } catch (_) {}
+    }
+
+    if (jsonMode) {
+      out({ query, results });
+    } else {
+      if (results.length === 0) {
+        console.log(`No tabs found matching: "${query}"`);
+      } else {
+        console.log(`${results.length} tab(s) matching "${query}":\n`);
+        results.forEach((r) => {
+          const label = r.match === "header" ? "(title/URL)" : "(page content)";
+          console.log(`  [${r.tab}] ${r.title} ${label}`);
+          console.log(`      ${r.url}`);
+          if (r.snippet) console.log(`      ...${r.snippet}...`);
+          console.log();
+        });
+      }
+    }
+    return results;
+  },
+
+  async "close-all"() {
+    const tabs = (await CDP.List({ host, port })).filter((t) => t.type === "page");
+    if (tabs.length === 0) {
+      out(jsonMode ? { closed: 0 } : "No tabs open.");
+      return;
+    }
+
+    const closed = [];
+    for (const tab of tabs) {
+      try {
+        await CDP.Close({ host, port, id: tab.id });
+        closed.push(tab.title || tab.url);
+      } catch (_) {}
+    }
+
+    // Invalidate connection
+    if (client) { try { await client.close(); } catch (_) {} }
+    client = null;
+    connectedTab = -1;
+
+    await new Promise((r) => setTimeout(r, 500));
+    out(jsonMode ? { closed: closed.length, titles: closed } : `Closed ${closed.length} tab(s): ${closed.map((t) => `"${t}"`).join(", ")}`);
+  },
 };
 
 // ─── Argument parsing ───────────────────────────────────────────────────────
@@ -555,6 +669,10 @@ Commands:
   html [selector]                   Get HTML (default: body)
   new-tab [url]                     Open a new tab (via CDP, no popup blocker)
   close [tab-index]                 Close a tab
+  search <query>                    Search across all open tabs (title, URL, page content)
+  close-all                         Close all open tabs
+  search <query>                    Search across all open tabs (title, URL, page content)
+  close-all                         Close all open tabs
 
 Flags:
   --json          Output JSON (for agent parsing)
