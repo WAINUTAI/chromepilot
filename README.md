@@ -5,7 +5,7 @@ CLI tool to control Chrome/Chromium via CDP (Chrome DevTools Protocol). Works on
 ## Features
 
 ### Browser Automation
-- **Tab management**: List, open, select, close tabs
+- **Tab management**: List, open, select, close, search, close-all tabs
 - **Navigation**: Open URLs with load wait
 - **Element interaction**: Click by index/text/selector, type, fill inputs
 - **Content extraction**: Get page text, HTML, screenshots
@@ -76,6 +76,8 @@ node browser.js content
 node browser.js screenshot page.png
 node browser.js fill "input[name='q']" "WAINUT"
 node browser.js evaluate "document.title"
+node browser.js search "github"          # search across all tabs
+node browser.js close-all                # close all open tabs
 ```
 
 ### Chain commands
