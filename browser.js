@@ -542,13 +542,14 @@ const commands = {
             const bodyText = await tmpClient.Runtime.evaluate({
               expression: `(document.body ? document.body.innerText || '' : '').substring(0, 5000)`,
               returnByValue: true,
+              awaitPromise: true,
             });
-            const content = (bodyText.value || "").toLowerCase();
+            const content = ((bodyText.result && bodyText.result.value) || "").toLowerCase();
             const idx = content.indexOf(searchLower);
             if (idx !== -1) {
               const start = Math.max(0, idx - 60);
               const end = Math.min(content.length, idx + query.length + 60);
-              const snippet = (bodyText.value || "").substring(start, end).replace(/\s+/g, " ").trim();
+              const snippet = ((bodyText.result && bodyText.result.value) || "").substring(start, end).replace(/\s+/g, " ").trim();
               results.push({ tab: i, title, url, match: "content", snippet });
             }
           } catch (_) {}
