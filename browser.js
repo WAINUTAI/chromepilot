@@ -28,6 +28,7 @@
  *   html [selector]                   Get outer HTML (default: body)
  *   search <query>                    Search across all open tabs (title, URL, page content)
  *   close-all                         Close all open tabs
+ *   serve                             Start persistent HTTP server (default port 9223)
  *
  * Chain commands:    node browser.js open https://hn.com then elements
  * JSON output:       node browser.js --json list
@@ -45,6 +46,7 @@ let port = 9222;
 let host = "127.0.0.1";
 let jsonMode = false;
 let targets = [];
+let httpPort = 9223;
 
 // ─── Output helpers ─────────────────────────────────────────────────────────
 
@@ -590,6 +592,13 @@ const commands = {
     return results;
   },
 
+  async serve() {
+    const { startServer } = require("./server.js");
+    startServer({ port: httpPort, cdpHost: host, cdpPort: port });
+    // Keep the process alive; the HTTP server owns the event loop from here.
+    await new Promise(() => {});
+  },
+
   async "close-all"() {
     const tabs = (await CDP.List({ host, port })).filter((t) => t.type === "page");
     if (tabs.length === 0) {
@@ -630,6 +639,8 @@ function parseArgs(argv) {
       currentTab = parseInt(argv[++i], 10);
     } else if (arg === "--port" && argv[i + 1]) {
       port = parseInt(argv[++i], 10);
+    } else if (arg === "--http-port" && argv[i + 1]) {
+      httpPort = parseInt(argv[++i], 10);
     } else if (arg === "then") {
       // Chain separator
       current = null;
@@ -672,13 +683,13 @@ Commands:
   close [tab-index]                 Close a tab
   search <query>                    Search across all open tabs (title, URL, page content)
   close-all                         Close all open tabs
-  search <query>                    Search across all open tabs (title, URL, page content)
-  close-all                         Close all open tabs
+  serve                             Start persistent HTTP server on --http-port (default 9223)
 
 Flags:
   --json          Output JSON (for agent parsing)
   --tab <index>   Target tab (default: 0)
   --port <port>   CDP port (default: 9222)
+  --http-port <n> HTTP server port for 'serve' (default: 9223)
 
 Chain commands with "then":
   node browser.js open https://hn.com then content

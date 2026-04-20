@@ -11,6 +11,7 @@
     "list": "node browser.js list",
     "launch": "bash ./launch-chrome.sh",
     "stop": "bash ./stop-chrome.sh",
+    "serve": "node browser.js serve",
     "draft": "node compose-draft.js",
     "test": "node browser.js help"
   },

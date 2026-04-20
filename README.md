@@ -15,7 +15,7 @@ CLI tool to control Chrome/Chromium via CDP (Chrome DevTools Protocol). Works on
 
 ### Chrome Integration
 - **Auto-detect Chrome**: `google-chrome-stable`, `google-chrome`, `chromium-browser`, `chromium`, or `/snap/bin/chromium`
-- **Dedicated debug profile**: Uses `/tmp/browser-js-chrome-profile` to avoid conflicts with your regular browser
+- **Dedicated debug profile** to avoid conflicts with your regular browser: `/tmp/browser-js-chrome-profile` on Linux/macOS, `<repo>/chrome-debug-profile` on Windows
 - **CDP health check**: Verifies the debug endpoint is live before running commands
 
 ### Gmail Support
@@ -26,6 +26,16 @@ CLI tool to control Chrome/Chromium via CDP (Chrome DevTools Protocol). Works on
 - **Chain commands**: Run multiple commands in sequence with `then`
 - **JSON output**: Machine-readable output for agent parsing
 - **Custom port**: Override CDP port (default: 9222)
+
+### HTTP server (persistent agent mode)
+- **`node browser.js serve`** runs a long-lived HTTP API on `127.0.0.1:9223`
+- 14 endpoints for agents: `/recon`, `/click`, `/fill`, `/read`, `/dismiss`, `/navigate`, `/eval`, `/scroll`, `/type`, `/dispatch`, `/captcha`, `/focus`, `/tabs`, `/health`
+- Chrome and the server stay open; agents come and go over plain HTTP
+- Structured `/recon` page snapshot with overlay + captcha detection built in
+- **Notification prompts auto-blocked**: `Notification.requestPermission`, `PushManager.subscribe`, and `navigator.permissions.query({name:"notifications"})` are all overridden to return `denied` on every tab the server touches — site-level "allow notifications" popups never appear
+- **Shadow-DOM + cross-origin iframe aware** `/dismiss`: walks cookie/consent iframes (Sourcepoint, OneTrust, Didomi, Cookiebot, etc.) and shadow roots to reach banners most selectors miss
+- **Unicode-safe typing**: ASCII chars go through CDP keyboard events (so React/autocomplete handlers fire); em-dashes, smart quotes, accented chars, CJK, and emoji use `Input.insertText` so they land intact
+- **Platform-agnostic input clearing**: no `Ctrl+A` keystroke — clears via native value setter, so `/fill` works the same on Windows, Linux, and macOS
 
 ## Install
 
@@ -78,6 +88,13 @@ node browser.js fill "input[name='q']" "WAINUT"
 node browser.js evaluate "document.title"
 node browser.js search "github"          # search across all tabs
 node browser.js close-all                # close all open tabs
+node browser.js serve                    # start the persistent HTTP API (see below)
+```
+
+Full CLI reference with all commands and flags:
+
+```bash
+node browser.js help
 ```
 
 ### Chain commands
@@ -91,6 +108,97 @@ node browser.js open https://news.ycombinator.com then content
 ```bash
 node browser.js --json list
 ```
+
+## Server mode (HTTP API)
+
+Start the long-running HTTP server so agents can drive Chrome over HTTP without re-launching Node on every step:
+
+```bash
+# Start Chrome first (once), then:
+node browser.js serve
+# or
+npm run serve
+# Bind to a different port:
+node browser.js --http-port 9300 serve
+```
+
+The server binds to `127.0.0.1:9223` by default and stays up until you kill it. Chrome must be reachable on `127.0.0.1:9222` (the standard launch script handles this).
+
+### Endpoints
+
+All POST bodies are JSON. The `tab` field accepts a numeric index (`"0"`, `"1"`) **or** a substring matched against tab URL/title. Omit `tab` to target tab 0.
+
+`/fill` `value` semantics per input type:
+- Text / textarea / contenteditable — typed character-by-character
+- `type=date` / `time` / `datetime-local` / `month` / `week` / `color` / `range` — set via native setter (ISO strings for dates: `"2026-05-15"`, `"14:30"`, `"2026-05-15T14:30"`)
+- `type=checkbox` / `radio` — `true` / `"true"` / `"on"` / `"1"` check it, anything else unchecks
+- `<select>` — value matches `<option value="...">`
+
+| Method | Path | Body | Purpose |
+|---|---|---|---|
+| GET  | `/health`   | — | Server + CDP status |
+| GET  | `/tabs`     | — | List open tabs |
+| POST | `/recon`    | `{url?, tab?, waitMs?, keepTab?}` | Full page snapshot: elements, forms, overlays, captchas, meta, landmarks |
+| POST | `/navigate` | `{tab?, url?, back?, forward?, waitMs?}` | Navigate, go back/forward |
+| POST | `/click`    | `{tab?, selector?, text?, index?, waitAfter?}` | Click by selector, fuzzy text, or index |
+| POST | `/fill`     | `{tab?, fields:[{selector,value}], submit?}` | Fill text / date / time / checkbox / radio / select / contenteditable. `submit`: `"enter"` \| `"form"` \| `"auto"` \| CSS selector. Unicode-safe. |
+| POST | `/read`     | `{tab?, selector?}` | Structured sections (headings/tables/lists/code) + plaintext |
+| POST | `/dismiss`  | `{tab?}` | Close cookie banners / modals — multi-language patterns, walks shadow DOM + cross-origin consent iframes (Sourcepoint, OneTrust, Didomi, Cookiebot, …) |
+| POST | `/scroll`   | `{tab?, direction, amount?}` | Scroll + returns `{scrollY, scrollHeight, viewportHeight, atBottom, contentPreview}` |
+| POST | `/type`     | `{tab?, keys, submit?}` | Raw CDP key input (no focus/clear). `submit`: `"enter"` \| `"tab"` |
+| POST | `/dispatch` | `{tab?, selector, event, eventInit?, reactDebug?}` | Fire native DOM events. `reactDebug:true` returns `__reactProps` handler chain for inspection |
+| POST | `/captcha`  | `{tab?, action}` | `detect`/`read`/`next`/`prev`/`submit`/`audio`/`restart`. Works on reCAPTCHA (id-based) and Arkose/hCaptcha (aria-label-based); walks cross-origin captcha iframes |
+| POST | `/focus`    | `{tab?}` | Bring tab to front |
+| POST | `/eval`     | `{tab?, expression}` | Run JS in page context |
+
+### Examples
+
+```bash
+curl http://127.0.0.1:9223/health
+curl http://127.0.0.1:9223/tabs
+
+curl -X POST http://127.0.0.1:9223/navigate \
+  -H "Content-Type: application/json" \
+  -d '{"url":"https://example.com"}'
+
+curl -X POST http://127.0.0.1:9223/recon \
+  -H "Content-Type: application/json" \
+  -d '{"tab":"0"}'
+
+curl -X POST http://127.0.0.1:9223/click \
+  -H "Content-Type: application/json" \
+  -d '{"text":"Sign in"}'
+
+curl -X POST http://127.0.0.1:9223/fill \
+  -H "Content-Type: application/json" \
+  -d '{"fields":[{"selector":"input[name=q]","value":"hello"}],"submit":"enter"}'
+
+curl -X POST http://127.0.0.1:9223/dismiss \
+  -H "Content-Type: application/json" -d '{}'
+
+curl -X POST http://127.0.0.1:9223/captcha \
+  -H "Content-Type: application/json" \
+  -d '{"action":"detect"}'
+
+curl -X POST http://127.0.0.1:9223/scroll \
+  -H "Content-Type: application/json" \
+  -d '{"direction":"down","amount":1200}'
+```
+
+### Troubleshooting
+
+- **`Cannot connect to Chrome` / `ECONNREFUSED 127.0.0.1:9222`** — Chrome's debug endpoint isn't running. Launch it first with `bash ./launch-chrome.sh` (Linux/macOS) or `.\launch-chrome.ps1` (Windows).
+- **`Port 9223 is already in use`** — another `serve` process is running. Either kill it (Ctrl+C in its terminal) or pass `--http-port <N>` to pick a different port.
+- **`Tab [N] not found`** — fewer tabs are open than the index you asked for. Call `GET /tabs` to see what's actually there.
+- **`/dismiss` returned `count: 0` but the banner is still visible** — the banner is likely rendered by a consent framework whose iframe URL doesn't match the built-in pattern list (Sourcepoint, OneTrust, Didomi, Cookiebot, Usercentrics, TrustArc, Iubenda, Quantcast, Evidon). Inspect with `/recon` and add a matching pattern to `CONSENT_IFRAME_RE` in `server.js` if needed.
+
+### Attribution
+
+The HTTP server in `server.js` adapts several injected page-script techniques
+(reconnaissance enumeration, overlay/cookie dismissal patterns, captcha
+iframe detection, date-input native setter, and React handler inspection)
+from MIT-licensed work by AllAboutAI-YT. See [`NOTICE`](NOTICE) for the
+copyright notice and full MIT license text.
 
 ## Gmail draft helper
 
