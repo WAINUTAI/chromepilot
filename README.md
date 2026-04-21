@@ -18,10 +18,6 @@ CLI tool to control Chrome/Chromium via CDP (Chrome DevTools Protocol). Works on
 - **Dedicated debug profile** to avoid conflicts with your regular browser: `/tmp/browser-js-chrome-profile` on Linux/macOS, `<repo>/chrome-debug-profile` on Windows
 - **CDP health check**: Verifies the debug endpoint is live before running commands
 
-### Gmail Support
-- Works with Gmail's various UI versions (`u/0`, `u/1`, etc.)
-- Handles EN/NL labels for compose fields
-
 ### Scripting
 - **Chain commands**: Run multiple commands in sequence with `then`
 - **JSON output**: Machine-readable output for agent parsing
@@ -276,12 +272,6 @@ The HTTP server in `server.js` adapts several injected page-script techniques
 iframe detection, date-input native setter, and React handler inspection)
 from MIT-licensed work by AllAboutAI-YT. See [`NOTICE`](NOTICE) for the
 copyright notice and full MIT license text.
-
-## Gmail draft helper
-
-```bash
-node compose-draft.js "name@example.com" "Subject" "Line 1\nLine 2"
-```
 
 ## Cleanup (important)
 

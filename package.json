@@ -14,7 +14,6 @@
     "serve": "node server.js",
     "serve:legacy": "node browser.js serve",
     "start:all": "node ./start-browsejs.js",
-    "draft": "node compose-draft.js",
     "test": "node browser.js help"
   },
   "keywords": ["chrome", "cdp", "browser", "automation"],

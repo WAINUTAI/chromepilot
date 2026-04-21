@@ -1,16 +1,13 @@
+---
+name: browsejs
+description: Browser automation via CDP through a persistent HTTP server on 127.0.0.1:9223. Use this skill when the user wants to drive Chrome from an agent — navigate pages, click/fill forms, read content, handle cookie banners, take structured page snapshots (/recon), or solve captchas. Also use when debugging anything on a live web page from the terminal. Requires the browser-js repo's HTTP server to be running; the skill includes the commands to bring it up if it's down.
+---
+
 # BrowseJS - Browser Automation via CDP (HTTP server)
 
 Control Chrome via the browser-js HTTP API on `127.0.0.1:9223`. This is the **preferred** method — the server is persistent, endpoints are structured, and one HTTP call is cheaper than spinning up a new Node process for every step.
 
 > This skill assumes Claude Code is running from the root of the `Browser-js` repo. All script paths are relative to the repo root. If you are running Claude from elsewhere, either `cd` into the repo first or use absolute paths.
-
-## Usage
-
-```
-/browsejs <instruction>
-```
-
-- `instruction`: What you want to do in the browser (e.g., "go to ad.nl and find today's headlines")
 
 ## Architecture (two ports)
 

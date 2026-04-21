@@ -65,7 +65,7 @@ npm run start:all
 
 ## Claude Code skill
 
-`.claude/commands/browsejs.md` is a project-scoped slash command for [Claude Code](https://claude.com/claude-code). Anyone who clones the repo and opens it with Claude Code gets `/browsejs` out of the box — it documents the HTTP API and tells the agent how to bring the stack up if health checks fail. Keep it in sync when you add/rename endpoints in `server.js`.
+`.claude/skills/browsejs/SKILL.md` is a project-scoped skill for [Claude Code](https://claude.com/claude-code). Anyone who clones the repo and opens it with Claude Code gets the `browsejs` skill out of the box — it documents the HTTP API and tells the agent how to bring the stack up if health checks fail. Keep it in sync when you add/rename endpoints in `server.js`.
 
 ## Code style
 
