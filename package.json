@@ -14,6 +14,7 @@
     "serve": "node server.js",
     "serve:legacy": "node browser.js serve",
     "start:all": "node ./start-browsejs.js",
+    "install:autostart": "node ./install-autostart.js",
     "test": "node browser.js help"
   },
   "keywords": ["chrome", "cdp", "browser", "automation"],

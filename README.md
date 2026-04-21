@@ -137,68 +137,33 @@ If you want Chrome (9222) **and** the HTTP server (9223) to come up every time y
 npm run start:all
 ```
 
-This dispatches to the platform-specific launcher (`start-browsejs.sh` on Linux/macOS, `start-browsejs.ps1` on Windows). You can also call them directly:
-
-```bash
-# Linux/macOS
-bash ./start-browsejs.sh
-
-# Windows (PowerShell)
-powershell -NoProfile -ExecutionPolicy Bypass -File .\start-browsejs.ps1
-```
-
-The launcher is idempotent:
+This dispatches to the platform-specific launcher (`start-browsejs.sh` on Linux/macOS, `start-browsejs.ps1` on Windows) and is idempotent:
 - If 9222 is already live → skips Chrome
 - If 9223 is already live → skips the server
 - Uses a **separate Chrome user-data-dir**, so it does not kill or hijack your normal Chrome session
 
-### Auto-start on Windows login
+On Windows the Chrome launcher auto-detects `chrome.exe` across Program Files (x64 and x86), `%LOCALAPPDATA%`, and Chrome Canary/Beta/Dev. Set `CHROME_PATH` to override.
 
-A small shortcut in the Startup folder runs the launcher silently on each login:
+### Auto-start on login (one command, any platform)
 
-```powershell
-# One-time install: create the Startup shortcut
-$startup = [Environment]::GetFolderPath('Startup')
-$lnk     = Join-Path $startup 'browser-js.lnk'
-$ws      = New-Object -ComObject WScript.Shell
-$sc      = $ws.CreateShortcut($lnk)
-$sc.TargetPath       = 'wscript.exe'
-$sc.Arguments        = "`"$PWD\start-browsejs-hidden.vbs`""
-$sc.WorkingDirectory = "$PWD"
-$sc.Save()
+```bash
+npm run install:autostart
 ```
 
-`start-browsejs-hidden.vbs` wraps the PowerShell launcher with a hidden console window. To disable: delete `%APPDATA%\Microsoft\Windows\Start Menu\Programs\Startup\browser-js.lnk`.
+This wires the stack into your OS session so Chrome (9222) and the HTTP server (9223) come up automatically:
 
-### Auto-start on Linux (systemd user unit, optional)
+| Platform | What it writes | Supervisor |
+|---|---|---|
+| **Windows** | Shortcut in `%APPDATA%\Microsoft\Windows\Start Menu\Programs\Startup\browser-js.lnk` → runs `start-browsejs-hidden.vbs` with a hidden console | No (starts at login only) |
+| **macOS** | `~/Library/LaunchAgents/com.wainut.browserjs.plist` — loads and starts immediately | launchd relaunches on crash |
+| **Linux** | `~/.config/systemd/user/browser-js.service` — enables and starts immediately | systemd restarts on failure |
 
-Create `~/.config/systemd/user/browser-js.service`:
-
-```ini
-[Unit]
-Description=browser-js CDP + HTTP server
-After=graphical-session.target
-
-[Service]
-Type=simple
-WorkingDirectory=%h/Browser-js
-ExecStart=/usr/bin/env bash %h/Browser-js/start-browsejs.sh
-Restart=on-failure
-
-[Install]
-WantedBy=default.target
-```
-
-Then: `systemctl --user enable --now browser-js`.
-
-### Auto-start on macOS (launchd, optional)
-
-Use `launchctl` with a `LaunchAgent` plist in `~/Library/LaunchAgents/` that runs `bash /path/to/Browser-js/start-browsejs.sh` with `RunAtLoad=true`. See Apple's `launchd.plist(5)` for the exact format.
+Run it once per machine. Safe to re-run. The installer prints the exact uninstall command for your platform.
 
 ### Caveats
 
-- Auto-start fires on **login**, not boot — the stack comes up when you sign in, not while the login screen is showing.
-- The launcher does not supervise the server. If `node server.js` crashes it stays down until the next login or manual launch. For always-on use, run it under systemd / launchd / a Windows Scheduled Task with restart-on-failure.
+- Windows auto-start fires on **login**, not boot. The stack comes up when you sign in, not while the login screen is showing. (macOS launchd and Linux systemd user units behave the same way — they're per-user sessions.)
+- macOS/Linux installers include crash supervision (launchd `KeepAlive.Crashed`, systemd `Restart=on-failure`). The Windows shortcut does not — if `node server.js` crashes it stays down until next login or `npm run start:all`. For always-on Windows use, wrap it in a Scheduled Task with "restart on failure".
 
 ### Endpoints
 
