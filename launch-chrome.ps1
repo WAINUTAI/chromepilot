@@ -57,6 +57,9 @@ Start-Process $chromePath -ArgumentList `
     "--remote-debugging-port=$debugPort", `
     "--remote-debugging-address=127.0.0.1", `
     "--user-data-dir=$debugProfile", `
+    "--window-position=0,0", `
+    "--window-size=1680,1050", `
+    "--start-maximized", `
     "--no-first-run", `
     "--no-default-browser-check"
 

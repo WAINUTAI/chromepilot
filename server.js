@@ -670,21 +670,25 @@ async function fillOneField(client, selector, value) {
   `);
 
   const str = String(value);
-  for (const char of str) {
-    if (char === "\n") {
-      await client.Input.dispatchKeyEvent({ type: "keyDown", key: "Enter", code: "Enter" });
-      await client.Input.dispatchKeyEvent({ type: "keyUp", key: "Enter", code: "Enter" });
-    } else if (char === "\t") {
-      await client.Input.dispatchKeyEvent({ type: "keyDown", key: "Tab", code: "Tab" });
-      await client.Input.dispatchKeyEvent({ type: "keyUp", key: "Tab", code: "Tab" });
-    } else if (char.charCodeAt(0) < 128) {
-      // ASCII — use keyboard events so site listeners (autocomplete, live validation) fire
-      await client.Input.dispatchKeyEvent({ type: "keyDown", text: char });
-      await client.Input.dispatchKeyEvent({ type: "keyUp", text: char });
-    } else {
-      // Non-ASCII (smart quotes, em-dash, accented chars, emoji, CJK) — dispatchKeyEvent
-      // mangles these; insertText puts them in the focused element intact
-      await client.Input.insertText({ text: char });
+  // Prefer Input.insertText for the whole string: it fires proper beforeinput/input events
+  // that React-controlled inputs accept AND that Chrome's saved-password autofill recognizes.
+  // Per-char dispatchKeyEvent({text}) is silently DROPPED by some React forms — e.g. an Auth0
+  // #username field ignored every keystroke (value stayed empty) and autofill never fired.
+  // insertText fills the email AND commits Chrome's autofilled password. Only fall back to
+  // per-key events when the value carries control chars (\n/\t), which insertText can't express.
+  if (!/[\n\t]/.test(str)) {
+    await client.Input.insertText({ text: str });
+  } else {
+    for (const char of str) {
+      if (char === "\n") {
+        await client.Input.dispatchKeyEvent({ type: "keyDown", key: "Enter", code: "Enter" });
+        await client.Input.dispatchKeyEvent({ type: "keyUp", key: "Enter", code: "Enter" });
+      } else if (char === "\t") {
+        await client.Input.dispatchKeyEvent({ type: "keyDown", key: "Tab", code: "Tab" });
+        await client.Input.dispatchKeyEvent({ type: "keyUp", key: "Tab", code: "Tab" });
+      } else {
+        await client.Input.insertText({ text: char });
+      }
     }
   }
 }
